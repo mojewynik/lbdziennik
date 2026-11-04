@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>E-Dziennik Ucznia</title>
+    <style>
+        body { font-family: sans-serif; background: #e9ecef; padding: 20px; color: #333; margin: 0; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .student-header { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .student-header h2 { margin: 0; color: #2c3e50; font-size: 1.5rem; }
+        .student-header p { margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.9rem; }
+
+        /* Menu górne z Twojego pierwszego obrazka */
+        .top-menu { display: flex; justify-content: center; gap: 15px; background: #dbe2e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .menu-item { display: flex; flex-direction: column; align-items: center; width: 80px; text-align: center; cursor: pointer; text-decoration: none; color: #333; font-size: 0.8rem; position: relative; }
+        .circle-icon { width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 5px; transition: transform 0.2s; }
+        .menu-item:hover .circle-icon { transform: scale(1.05); background: #f8f9fa; }
+        .badge-count { position: absolute; top: 0; right: 15px; background: #007bff; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; }
+        
+        .page-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none; }
+        .page-section.active { display: block; }
+        
+        /* STYLE TABELI OCEN Z PIERWSZEGO OBRAZKA */
+        .librus-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            background: #ffffff;
+            margin-top: 15px;
+        }
+        .librus-table th, .librus-table td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        .librus-table th {
+            background-color: #e6e6e6;
+            color: #333;
+            text-align: center;
+            font-weight: normal;
+        }
+        .bg-avg { background-color: #f9f9f9; text-align: center; width: 60px; }
+        .text-center { text-align: center; width: 30px; }
+        .subject-name { font-weight: normal; color: #333; background-color: #fdfdfd; }
+        .grades-container { display: flex; gap: 4px; flex-wrap: wrap; min-height: 20px; }
+        .no-grades { color: #999; font-size: 0.8rem; }
+
+        /* STYLE SEKCJI WIADOMOŚCI Z DRUGIEGO OBRAZKA */
+        .messages-wrapper { display: flex; gap: 20px; font-size: 0.85rem; margin-top: 15px; }
+        
+        /* Lewy panel boczny folderów */
+        .messages-sidebar { width: 150px; flex-shrink: 0; }
+        .btn-write { background-color: #0088cc; color: white; border: none; padding: 6px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; text-align: center; margin-bottom: 15px; }
+        .btn-write:hover { background-color: #0077b3; }
+        .folder-list { list-style: none; padding: 0; margin: 0; }
+        .folder-list li { padding: 5px 0; color: #555; cursor: pointer; font-size: 0.85rem; }
+        .folder-list li.active-folder { color: #0088cc; font-weight: bold; }
+        .folder-list li:hover { text-decoration: underline; }
+        
+        /* Prawa strona z listą i akcjami */
+        .messages-main { flex-grow: 1; }
+        .messages-toolbar { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .btn-action { background: #f5f5f5; border: 1px solid #ccc; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 0.8rem; }
+        .btn-action:hover { background: #e8e8e8; }
+        
+        /* Główna tabela wiadomości */
+        .messages-table { width: 100%; border-collapse: collapse; background: white; }
+        .messages-table th, .messages-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .messages-table th { background: #f5f5f5; font-weight: normal; color: #555; }
+        .col-check { width: 30px; text-align: center; }
+        .col-sender { width: 30%; }
+        .col-title { width: 50%; }
+        .col-date { width: 15%; text-align: center; }
+        .col-actions { width: 30px; text-align: center; }
+        
+        .empty-text { text-align: center; color: #7f8c8d; font-style: italic; padding: 20px; }
+
+        /* Okno tworzenia wiadomości */
+        .compose-modal { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.28); align-items:center; justify-content:center; padding:16px; }
+        .compose-modal.open { display:flex; }
+        .compose-window { width:min(1000px, 100%); background:#fff; border:1px solid #c9c9c9; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.18); overflow:hidden; font-size:12px; color:#52677d; }
+        .compose-titlebar { height:18px; padding:0 18px; background:#e6e7e8; color:#52677d; line-height:18px; }
+        .compose-content { display:grid; grid-template-columns:42% 58%; gap:0; padding:14px 18px 12px; }
+        .compose-left { padding:0 18px 0 6px; }
+        .compose-right { padding:0 0 0 12px; }
+        .compose-heading { text-align:center; margin:0 0 18px; font-weight:normal; }
+        .recipient-option { display:flex; align-items:center; gap:5px; margin:0 0 9px; cursor:pointer; }
+        .recipient-option input { margin:0; accent-color:#587b9e; }
+        .teacher-choice { margin:7px 0 0 23px; padding:7px 9px; border-left:2px solid #d9e0e7; background:#f8f9fa; display:none; }
+        .teacher-choice.visible { display:block; }
+        .compose-note { margin-top:28px; line-height:1.65; color:#58718b; }
+        .compose-note a { color:#0074c8; }
+        .compose-field { display:grid; grid-template-columns:62px 1fr; align-items:start; gap:10px; margin:0 0 16px; }
+        .compose-field label { text-align:right; padding-top:6px; }
+        .compose-field input, .compose-field textarea { width:100%; box-sizing:border-box; border:1px solid #d7d7d7; border-radius:5px; padding:5px 8px; font:inherit; color:#333; }
+        .compose-field input { height:26px; }
+        .compose-field textarea { height:250px; resize:vertical; }
+        .compose-actions { display:flex; justify-content:flex-end; gap:14px; padding:0 28px 12px; }
+        .compose-actions button { min-width:120px; padding:5px 18px; border:1px solid #d3d3d3; border-radius:5px; cursor:pointer; color:#52677d; }
+        .compose-send { background:#f4f4f4; }
+        .compose-send:disabled { color:#aaa; cursor:not-allowed; }
+        .compose-cancel { background:#eee; }
+        .message-row { cursor:pointer; }
+        .message-row:hover { background:#f8fbfd; }
+        @media(max-width:650px) { .compose-content { grid-template-columns:1fr; } .compose-right { padding:20px 0 0; } .compose-left { padding:0; } .compose-field { grid-template-columns:55px 1fr; } .compose-field textarea { height:180px; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="student-header">
+        <h2>Konto Ucznia: Jan Kowalski</h2>
+        <p>Klasa 3A | Szkoła Średnia</p>
+    </div>
+
+    <!-- GÓRNE MENU Z IKONKAMI -->
+    <div class="top-menu">
+        <div class="menu-item" onclick="switchPage('views')">
+            <div class="circle-icon">◑</div><div>Widok alternatywny</div>
+        </div>
+        <div class="menu-item" onclick="switchPage('oceny')">
+            <div class="circle-icon">📋</div><div>Oceny</div>
+        </div>
+        <div class="menu-item" onclick="switchPage('frekwencja')">
+            <div class="circle-icon">📅</div><div>Frekwencja</div>
+        </div>
+        <div class="menu-item" onclick="switchPage('wiadomosci')">
+            <div class="circle-icon">✉</div><div>Wiadomości</div>
+            <div class="badge-count" id="msgBadge">0</div>
+        </div>
+        <div class="menu-item" onclick="switchPage('ogloszenia')">
+            <div class="circle-icon">📢</div><div>Ogłoszenia</div>
+        </div>
+        <div class="menu-item" onclick="switchPage('terminarz')">
+            <div class="circle-icon">📆</div><div>Terminarz</div>
+            <div class="badge-count">0</div>
+        </div>
+        <div class="menu-item" onclick="switchPage('zadania')">
+            <div class="circle-icon">📝</div><div>Zadania domowe</div>
+        </div>
+    </div>
+
+    <!-- SEKCJA: OCENY (Z pierwszego obrazka) -->
+    <div id="page-oceny" class="page-section active">
+        <h3>Wykaz Ocen i Przedmiotów</h3>
+        
+        <table class="librus-table">
+            <thead>
+                <tr>
+                    <th rowspan="2">Przedmiot</th>
+                    <th colspan="3">Okres 1</th>
+                    <th colspan="3">Okres 2</th>
+                    <th colspan="2">Koniec roku</th>
+                </tr>
+                <tr>
+                    <th>Oceny bieżące</th>
+                    <th>Śr. I</th>
+                    <th>I</th>
+                    <th>Oceny bieżące</th>
+                    <th>Śr. II</th>
+                    <th>II</th>
+                    <th>Śr. R</th>
+                    <th>R</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="subject-name">Język polski</td>
+                    <td><div class="grades-container"><span class="no-grades">Brak ocen</span></div></td>
+                    <td class="bg-avg">-</td>
+                    <td class="text-center">-</td>
+                    <td><div class="grades-container"><span class="no-grades">Brak ocen</span></div></td>
+                    <td class="bg-avg">-</td>
+                    <td class="text-center">-</td>
+                    <td class="bg-avg">-</td>
+                    <td class="text-center">-</td>
+                </tr>
+                <tr>
+                    <td class="subject-name">Matematyka</td>
+                    <td><div class="grades-container"><span class="no-grades">Brak ocen</span></div></td>
+                    <td class="bg-avg">-</td>
+                    <td class="text-center">-</td>
+                    <td><div class="grades-container"><span class="no-grades">Brak ocen</span></div></td>
+                    <td class="bg-avg">-</td>
+                    <td class="text-center">-</td>
+                    <td class="bg-avg">-</td>
+                    <td class="text-center">-</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SEKCJA: WIADOMOŚCI (Z drugiego obrazka) -->
+    <div id="page-wiadomosci" class="page-section">
+        <h3>Wiadomości</h3>
+        
+        <div class="messages-wrapper">
+            <!-- Lewa strona - foldery i przycisk Napisz -->
+            <div class="messages-sidebar">
+                <button class="btn-write" type="button" onclick="openCompose()">Napisz</button>
+                <ul class="folder-list">
+                    <li class="active-folder" data-folder="odebrane" onclick="showFolder('odebrane', this)">· odebrane</li>
+                    <li data-folder="wyslane" onclick="showFolder('wyslane', this)">wysłane</li>
+                    <li data-folder="kosz" onclick="showFolder('kosz', this)">kosz</li>
+                    <li data-folder="archiwum" onclick="showFolder('archiwum', this)">Archiwum</li>
+                </ul>
+            </div>
+            
+            <!-- Prawa strona - narzędzia i lista odebranych -->
+            <div class="messages-main">
+                <div class="messages-toolbar">
+                    <button class="btn-action">Usuń zaznaczone</button>
+                    <select style="padding: 3px; font-size: 0.8rem; border-radius: 3px; border: 1px solid #ccc;">
+                        <option>Więcej poleceń...</option>
+                    </select>
+                </div>
+                
+                <table class="messages-table">
+                    <thead>
+                        <tr>
+                            <th class="col-check"><input type="checkbox"></th>
+                            <th class="col-sender">Nadawca</th>
+                            <th class="col-title">Temat</th>
+                            <th class="col-date">Wysłano</th>
+                            <th class="col-actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="messagesTableBody">
+                        <tr>
+                            <td colspan="5" class="empty-text">Brak wiadomości w tym folderze.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- POZOSTAŁE SEKCJE -->
+
+    <!-- POZOSTAŁE SEKCJE -->
+    <div id="page-views" class="page-section"><h3>Widok alternatywny</h3><p class="empty-text">Brak skonfigurowanych ustawień widoku.</p></div>
+    <div id="page-frekwencja" class="page-section"><h3>Moja Frekwencja</h3><p class="empty-text">Brak danych dotyczących frekwencji.</p></div>
+    <div id="page-ogloszenia" class="page-section"><h3>Ogłoszenia szkolne</h3><p class="empty-text">Brak nowych ogłoszeń.</p></div>
+    <div id="page-terminarz" class="page-section"><h3>Terminarz</h3><p class="empty-text">Brak zaplanowanych wydarzeń.</p></div>
+    <div id="page-zadania" class="page-section"><h3>Zadania domowe</h3><p class="empty-text">Brak zadanych prac domowych.</p></div>
+
+</div>
+
+
+<!-- Okno Napisz -->
+<div id="composeModal" class="compose-modal" aria-hidden="true">
+    <div class="compose-window" role="dialog" aria-modal="true" aria-labelledby="composeWindowTitle">
+        <div class="compose-titlebar" id="composeWindowTitle">Wiadomości</div>
+        <form id="composeForm" onsubmit="sendMessage(event)">
+            <div class="compose-content">
+                <div class="compose-left">
+                    <p class="compose-heading">Adresat</p>
+                    <label class="recipient-option"><input type="radio" name="recipientGroup" value="nauczyciele" onchange="toggleTeacherChoice(true)"> Nauczyciele</label>
+                    <div id="teacherChoice" class="teacher-choice">
+                        <label class="recipient-option"><input type="radio" name="teacher" value="Paweł Waloszczyk" onchange="validateCompose()"> Paweł Waloszczyk</label>
+                    </div>
+                    <div class="compose-note">Wybierz grupę odbiorców, a następnie nauczyciela, do którego chcesz wysłać wiadomość.</div>
+                </div>
+                <div class="compose-right">
+                    <p class="compose-heading">Nowa wiadomość</p>
+                    <div class="compose-field"><label for="messageSubject">Temat</label><input id="messageSubject" type="text" maxlength="150" required></div>
+                    <div class="compose-field"><label for="messageBody">Treść</label><textarea id="messageBody" required></textarea></div>
+                </div>
+            </div>
+            <div class="compose-actions">
+                <button class="compose-send" id="sendMessageButton" type="submit" disabled>Wyślij</button>
+                <button class="compose-cancel" type="button" onclick="closeCompose()">Anuluj</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentFolder = 'odebrane';
+    let sentMessages = [];
+
+    function switchPage(pageId) {
+        document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+        const targetPage = document.getElementById('page-' + pageId);
+        if (targetPage) targetPage.classList.add('active');
+    }
+
+    function openCompose() {
+        const modal = document.getElementById('composeModal');
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('composeForm').reset();
+        document.getElementById('teacherChoice').classList.remove('visible');
+        validateCompose();
+        document.getElementById('messageSubject').focus();
+    }
+
+    function closeCompose() {
+        const modal = document.getElementById('composeModal');
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function toggleTeacherChoice(show) {
+        document.getElementById('teacherChoice').classList.toggle('visible', show);
+        validateCompose();
+    }
+
+    function validateCompose() {
+        const group = document.querySelector('input[name="recipientGroup"]:checked');
+        const teacher = document.querySelector('input[name="teacher"]:checked');
+        const subject = document.getElementById('messageSubject').value.trim();
+        const body = document.getElementById('messageBody').value.trim();
+        document.getElementById('sendMessageButton').disabled = !(group && teacher && subject && body);
+    }
+
+    document.getElementById('messageSubject').addEventListener('input', validateCompose);
+    document.getElementById('messageBody').addEventListener('input', validateCompose);
+
+    function sendMessage(event) {
+        event.preventDefault();
+        const teacher = document.querySelector('input[name="teacher"]:checked');
+        const subject = document.getElementById('messageSubject').value.trim();
+        const body = document.getElementById('messageBody').value.trim();
+        if (!teacher || !subject || !body) return;
+
+        const now = new Date();
+        sentMessages.unshift({
+            recipient: teacher.value,
+            subject,
+            body,
+            date: now.toLocaleDateString('pl-PL') + ' ' + now.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'})
+        });
+        closeCompose();
+        showFolder('wyslane', document.querySelector('[data-folder="wyslane"]'));
+    }
+
+    function showFolder(folder, element) {
+        currentFolder = folder;
+        document.querySelectorAll('.folder-list li').forEach(item => item.classList.remove('active-folder'));
+        if (element) element.classList.add('active-folder');
+        renderMessages();
+    }
+
+    function renderMessages() {
+        const tbody = document.getElementById('messagesTableBody');
+        if (currentFolder !== 'wyslane' || sentMessages.length === 0) {
+            const labels = {odebrane:'Brak wiadomości w tym folderze.', wyslane:'Brak wysłanych wiadomości.', kosz:'Kosz jest pusty.', archiwum:'Archiwum jest puste.'};
+            tbody.innerHTML = `<tr><td colspan="5" class="empty-text">${labels[currentFolder] || 'Brak wiadomości.'}</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = sentMessages.map((msg, index) => `
+            <tr class="message-row" onclick="viewMessage(${index})">
+                <td class="col-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+                <td>${escapeHtml(msg.recipient)}</td>
+                <td>${escapeHtml(msg.subject)}</td>
+                <td class="col-date">${escapeHtml(msg.date)}</td>
+                <td></td>
+            </tr>`).join('');
+    }
+
+    function viewMessage(index) {
+        const msg = sentMessages[index];
+        if (!msg) return;
+        alert('Do: ' + msg.recipient + '\nTemat: ' + msg.subject + '\n\n' + msg.body);
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    }
+
+    document.getElementById('composeModal').addEventListener('click', function(event) {
+        if (event.target === this) closeCompose();
+    });
+</script>
+</body>
+</html>
